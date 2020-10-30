@@ -1,5 +1,6 @@
 from .constants import MODEL_FIELDS, BASIC_OPTION, EXTRA_OPTION
 import logging
+from anki import notes
 
 logger = logging.getLogger('dict2Anki.noteManager')
 try:
@@ -53,10 +54,15 @@ def getOrCreateModel(modelName):
 
     logger.info(f'创建新模版:{modelName}')
     newModel = mw.col.models.new(modelName)
-    mw.col.models.add(newModel)
+    # mm = mw.col.models
+    # t = mm.newTemplate('default')
+    # mm.addTemplate(newModel, t)
+    logger.info(newModel)
+    logger.info(MODEL_FIELDS)
     for field in MODEL_FIELDS:
         mw.col.models.addField(newModel, mw.col.models.newField(field))
-    mw.col.models.update(newModel)
+    # mw.col.models.save(newModel, 'default')
+    # mw.col.models.update(newModel)
     return newModel
 
 
@@ -123,15 +129,20 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: dict, oneQueryResult: 
         return
     modelObject['did'] = deckObject['id']
 
+    # newNote = mw.col.newNote()
     newNote = anki.notes.Note(mw.col, modelObject)
+    newNote.model()['did'] = modelObject['did']
     newNote['term'] = oneQueryResult['term']
+
     for configName in BASIC_OPTION + EXTRA_OPTION:
         logger.debug(f'字段:{configName}--结果:{oneQueryResult.get(configName)}')
         if oneQueryResult.get(configName):
             # 短语例句
             if configName in ['sentence', 'phrase'] and currentConfig[configName]:
-                newNote[f'{configName}Front'] = '\n'.join([f'<tr><td>{e.strip()}</td></tr>' for e, _ in oneQueryResult[configName]])
-                newNote[f'{configName}Back'] = '\n'.join([f'<tr><td>{e.strip()}<br>{c.strip()}</td></tr>' for e, c in oneQueryResult[configName]])
+                newNote[f'{configName}Front'] = '\n'.join(
+                    [f'<tr><td>{e.strip()}</td></tr>' for e, _ in oneQueryResult[configName]])
+                newNote[f'{configName}Back'] = '\n'.join(
+                    [f'<tr><td>{e.strip()}<br>{c.strip()}</td></tr>' for e, c in oneQueryResult[configName]])
             # 图片
             elif configName == 'image':
                 newNote[configName] = f'src="{oneQueryResult[configName]}"'
