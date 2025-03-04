@@ -330,21 +330,21 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         remoteWordList = set([self.newWordListWidget.item(row).text() for row in range(self.newWordListWidget.count())])
 
         newWords = remoteWordList - localWordList  # 新单词
-        needToDeleteWords = localWordList - remoteWordList  # 需要删除的单词
+        # needToDeleteWords = localWordList - remoteWordList  # 需要删除的单词
         logger.info(f'本地: {localWordList}')
         logger.info(f'远程: {remoteWordList}')
         logger.info(f'待查: {newWords}')
-        logger.info(f'待删: {needToDeleteWords}')
+        # logger.info(f'待删: {needToDeleteWords}')
         waitIcon = QIcon(':/icons/wait.png')
-        delIcon = QIcon(':/icons/delete.png')
+        # delIcon = QIcon(':/icons/delete.png')
         self.newWordListWidget.clear()
         self.needDeleteWordListWidget.clear()
 
-        for word in needToDeleteWords:
-            item = QListWidgetItem(word)
-            item.setCheckState(Qt.CheckState.Checked)
-            item.setIcon(delIcon)
-            self.needDeleteWordListWidget.addItem(item)
+        # for word in needToDeleteWords:
+        #     item = QListWidgetItem(word)
+        #     item.setCheckState(Qt.CheckState.Checked)
+        #     item.setIcon(delIcon)
+        #     self.needDeleteWordListWidget.addItem(item)
 
         for word in newWords:
             item = QListWidgetItem(word)
