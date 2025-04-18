@@ -129,7 +129,7 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: dict, oneQueryResult: 
     newNote = anki.notes.Note(mw.col, modelObject)
     newNote['term'] = oneQueryResult['term']
     for configName in BASIC_OPTION + EXTRA_OPTION:
-        logger.debug(f'字段:{configName}--结果:{oneQueryResult.get(configName)}')
+        logger.debug(f'oneQueryResult: {oneQueryResult}, 字段:{configName}--结果:{oneQueryResult.get(configName)}')
         if oneQueryResult.get(configName):
             # 短语例句
             if configName in ['sentence', 'phrase'] and currentConfig[configName]:
@@ -138,14 +138,16 @@ def addNoteToDeck(deckObject, modelObject, currentConfig: dict, oneQueryResult: 
                 newNote[f'{configName}Back'] = '\n'.join(
                     [f'<tr><td>{e.strip()}<br>{c.strip()}</td></tr>' for e, c in oneQueryResult[configName]])
             # 图片
-            elif configName == 'image':
+            elif configName == 'image' and currentConfig[configName]:
                 newNote[configName] = f'src="{oneQueryResult[configName]}"'
             # 释义
             elif configName == 'definition' and currentConfig[configName]:
                 newNote[configName] = ' '.join(oneQueryResult[configName])
             # 发音
-            elif configName in EXTRA_OPTION[:2]:
-                newNote[configName] = f"[sound:{configName}_{oneQueryResult['term']}.mp3]"
+            elif configName in EXTRA_OPTION[:2] and currentConfig[configName]:
+                # 统一转成小写
+                # 因为AmEPron_british.mp3与AmEPron_British.mp3被操作系统视作为同一个文件
+                newNote[configName] = f"[sound:{configName}_{oneQueryResult['term'].lower()}.mp3]"
             # 其他
             elif currentConfig[configName]:
                 newNote[configName] = oneQueryResult[configName]

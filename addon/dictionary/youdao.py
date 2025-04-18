@@ -94,7 +94,7 @@ class Youdao(AbstractDictionary):
         :param groupId: 分组id
         :return:
         """
-        wordList = []
+        word_list = []
         try:
             logger.info(f'获取单词本(f{groupName}-{groupId})第:{pageNo}页')
             r = self.session.get(
@@ -102,9 +102,9 @@ class Youdao(AbstractDictionary):
                 timeout=self.timeout,
                 params={'bookId': groupId, 'limit': 15, 'offset': pageNo * 15}
             )
-            wordList = [item['word'] for item in r.json()['data']['itemList']]
+            word_list = [item['word'] for item in r.json()['data']['itemList']]
         except Exception as e:
             logger.exception(f'网络异常{e}')
         finally:
-            logger.info(wordList)
-            return wordList
+            logger.info(f'获取单词数量:{len(word_list)}')
+            return word_list

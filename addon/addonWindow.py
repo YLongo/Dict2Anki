@@ -64,7 +64,7 @@ class Windows(QDialog, mainUI.Ui_Dialog):
         self.setWindowTitle(MODEL_NAME)
         self.setupLogger()
         self.initCore()
-        self.checkUpdate()
+        # self.checkUpdate()
         # self.__dev() # 以备调试时使用
 
     def __dev(self):
@@ -331,10 +331,14 @@ class Windows(QDialog, mainUI.Ui_Dialog):
 
         newWords = remoteWordList - localWordList  # 新单词
         # needToDeleteWords = localWordList - remoteWordList  # 需要删除的单词
-        logger.info(f'本地: {localWordList}')
-        logger.info(f'远程: {remoteWordList}')
-        logger.info(f'待查: {newWords}')
+        # logger.info(f'本地: {localWordList}')
+        # logger.info(f'远程: {remoteWordList}')
+        # logger.info(f'待查: {newWords}')
         # logger.info(f'待删: {needToDeleteWords}')
+        logger.info(f'本地单词数量: {len(localWordList)}')
+        logger.info(f'远程单词数量: {len(remoteWordList)}')
+        logger.info(f'待查单词数量: {len(newWords)}')
+
         waitIcon = QIcon(':/icons/wait.png')
         # delIcon = QIcon(':/icons/delete.png')
         self.newWordListWidget.clear()
@@ -393,7 +397,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                     wordBundle['row'] = row
                 wordList.append(wordBundle)
 
-        logger.info(f'待查询单词{wordList}')
+        # logger.info(f'待查询单词{wordList}')
+        logger.info(f'待查询单词数量{len(wordList)}')
         # 查询线程
         self.progressBar.setMaximum(len(wordList))
         self.queryWorker = QueryWorker(wordList, apis[currentConfig['selectedApi']])
@@ -472,7 +477,8 @@ class Windows(QDialog, mainUI.Ui_Dialog):
                     audiosDownloadTasks.append((f"{whichPron}_{wordItemData['term']}.mp3", wordItemData[whichPron],))
         mw.reset()
 
-        logger.info(f'发音下载任务:{audiosDownloadTasks}')
+        # logger.info(f'发音下载任务:{audiosDownloadTasks}')
+        logger.info(f'发音下载任务数量:{len(audiosDownloadTasks)}')
 
         if audiosDownloadTasks:
             self.syncBtn.setEnabled(False)

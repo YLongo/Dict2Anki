@@ -1,6 +1,6 @@
 import json
 import logging
-import tempfile
+import time
 import traceback
 
 import requests
@@ -9,7 +9,6 @@ from itertools import chain
 from .misc import ThreadPool
 from requests.adapters import HTTPAdapter
 from .constants import VERSION, VERSION_CHECK_API
-# from PyQt5.QtCore import QObject, pyqtSignal, QThread
 from aqt import QObject, pyqtSignal, QThread, mw
 import os
 from tempfile import gettempdir
@@ -113,7 +112,7 @@ class QueryWorker(QObject):
                 return
             queryResult = self.api.query(word)
             if queryResult:
-                self.logger.info(f'查询成功: {word} -- {queryResult}')
+                # self.logger.info(f'查询成功: {word} -- {queryResult}')
                 self.thisRowDone.emit(row, queryResult)
             else:
                 self.logger.warning(f'查询失败: {word}')
@@ -123,7 +122,12 @@ class QueryWorker(QObject):
             return queryResult
 
         with ThreadPool(max_workers=1) as executor:
+            count = 0
             for word in self.wordList:
+                count += 1
+                # 若果查询次数过多,则等待
+                if count % 10 == 0:
+                    time.sleep(1)
                 executor.submit(_query, word['term'], word['row'])
 
         self.allQueryDone.emit()
@@ -146,28 +150,83 @@ class AudioDownloadWorker(QObject):
     def run(self):
         currentThread = QThread.currentThread()
 
-        def __download(fileName, url):
+        def __download(file_name, url, retry=True):
             try:
                 if currentThread.isInterruptionRequested():
                     return
+
+                # Anki媒体文件地址
+                media_dir = mw.col.media.dir()
+
+                # 如果文件存在, 则跳过
+                if mw.col.media.have(media_dir + "/" + file_name):
+                    self.logger.info(f'{file_name} 已存在')
+                    return
+
                 # fix macos can't create file, so create file in temp dir
-                fileName = gettempdir() + "/anki_temp/" + fileName
+                filePath = gettempdir() + "/anki_temp/" + file_name
                 r = self.session.get(url, stream=True)
-                with open(fileName, 'wb') as f:
+                # 判断响应参数
+                if r.status_code != 200:
+                    self.logger.warning(f'下载{filePath}:{url}失败: {r.status_code}')
+                    time.sleep(60)
+                    return
+
+                # 检查Content-Type头部判断是否是音频
+                content_type = r.headers.get('Content-Type', '').lower()
+
+                if content_type.startswith('audio/') is False:
+                    self.logger.warning(f'{file_name} 不是音频文件')
+                    data = r.json()
+                    if data.get("code") == 403:
+                        self.logger.warning(f'{file_name} 访问被禁')
+                        time.sleep(60)
+                    return
+
+                # 处理音频文件
+                with open(filePath, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
-                    self.logger.info(f'{fileName} 下载完成')
-                mw.col.media.add_file(fileName)
-                os.remove(fileName)
-                self.logger.info(f"{fileName} 添加到媒体库,临时文件已删除")
+                    # self.logger.info(f'{fileName} 下载完成')
+
+                # 获取服务器端文件大小（需服务器支持Content-Length）
+                file_size = int(r.headers.get('Content-Length', 0))
+                # 下载完成后检查本地文件大小
+                if os.path.getsize(filePath) != file_size:
+                    os.remove(filePath)
+                    self.logger.warning(f"{file_name} 可能未完整下载")
+                    return
+
+                mw.col.media.add_file(filePath)
+                os.remove(filePath)
+                # self.logger.info(f"{fileName} 添加到媒体库,临时文件已删除")
+            except requests.exceptions.RetryError:
+                self.logger.warning(f'下载{file_name}:{url}重试失败')
+                if retry:
+                    # 如果url中存在type=1, 则替换为type=2
+                    # 如果url中存在type=2, 则替换为type=1
+                    if 'type=1' in url:
+                        url = url.replace('type=1', 'type=2')
+                    elif 'type=2' in url:
+                        url = url.replace('type=2', 'type=1')
+                    # 递归调用一次之后不再重试
+                    self.logger.info(f'递归调用下载{file_name}:{url}')
+                    __download(file_name, url, False)
+
             except Exception as e:
-                self.logger.warning(f'下载{fileName}:{url}异常: {e}')
+                self.logger.warning(f'下载{file_name}:{url}异常: {e}')
                 traceback.print_exc()
             finally:
                 self.tick.emit()
 
         with ThreadPool(max_workers=3) as executor:
+            count = 0
             for fileName, url in self.audios:
+                count += 1
+                # 若果下载次数过多,则等待
+                if count % 10 == 0:
+                    time.sleep(1)
                 executor.submit(__download, fileName, url)
         self.done.emit()
+        self.logger.info('下载完成')
