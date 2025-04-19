@@ -146,16 +146,13 @@ class API(AbstractQueryAPI):
 
     @classmethod
     def query(cls, word) -> dict:
-        queryResult = None
+        query_result = None
         try:
             rsp = cls.session.get(cls.url, params=urlencode(dict(cls.params, **{'q': word})), timeout=cls.timeout)
             logger.debug(f'code:{rsp.status_code}- word:{word} text:{rsp.text}')
-            parser = cls.parser(rsp.json(), word)
-            logger.info(f'rsp Result: {rsp.json()}')
-            logger.info(f'Parser Result: {parser.result}')
-            queryResult = parser.result
+            query_result = cls.parser(rsp.json(), word).result
         except Exception as e:
             logger.exception(e)
         finally:
-            logger.debug(queryResult)
-            return queryResult
+            logger.debug(query_result)
+            return query_result
