@@ -37,9 +37,13 @@ class Parser:
     def pronunciations(self) -> dict:
         url = 'http://dict.youdao.com/dictvoice?audio='
         pron = {
+            # 美式音标
             'AmEPhonetic': None,
+            # 美式发音
             'AmEUrl': None,
+            # 英式音标
             'BrEPhonetic': None,
+            # 英式发音
             'BrEUrl': None
         }
         try:
@@ -53,12 +57,16 @@ class Parser:
             pass
 
         try:
-            pron['AmEUrl'] = url + self._result['simple']['word'][0]['usspeech']
+            # 如果没有发音, 则拼接audio=word&type=1
+            usspeech = self._result['simple']['word'][0].get('usspeech', f'{self.term}&type=1')
+            pron['AmEUrl'] = url + usspeech
         except (TypeError, KeyError):
             pass
 
         try:
-            pron['BrEUrl'] = url + self._result['simple']['word'][0]['ukspeech']
+            # 如果没有发音, 则拼接audio=word&type=1
+            ukspeech = self._result['simple']['word'][0].get('ukspeech', f'{self.term}&type=1')
+            pron['BrEUrl'] = url + ukspeech
         except (TypeError, KeyError):
             pass
 
@@ -142,7 +150,10 @@ class API(AbstractQueryAPI):
         try:
             rsp = cls.session.get(cls.url, params=urlencode(dict(cls.params, **{'q': word})), timeout=cls.timeout)
             logger.debug(f'code:{rsp.status_code}- word:{word} text:{rsp.text}')
-            queryResult = cls.parser(rsp.json(), word).result
+            parser = cls.parser(rsp.json(), word)
+            logger.info(f'rsp Result: {rsp.json()}')
+            logger.info(f'Parser Result: {parser.result}')
+            queryResult = parser.result
         except Exception as e:
             logger.exception(e)
         finally:
