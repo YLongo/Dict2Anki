@@ -16,12 +16,15 @@ class Parser:
     @property
     def definition(self) -> list:
         try:
-            ec = [d['tr'][0]['l']['i'][0] for d in self._result['ec']['word'][0]['trs']][:3]
+            # 英汉释义 取前三个释义
+            ec_items = ['<li>' + d['tr'][0]['l']['i'][0] + '</li>' for d in self._result['ec']['word'][0]['trs']][:3]
+            ec = ['<ul>'] + ec_items + ['</ul>']
         except KeyError:
             ec = []
 
         try:
-            ee = [ d['pos'] + d['tr'][0]['l']['i'] for d in self._result['ee']['word']['trs']]
+            # 英英释义
+            ee = [ d['pos'] + d['tr'][0]['l']['i'] + '\n' for d in self._result['ee']['word']['trs']]
         except KeyError:
             ee = []
         
